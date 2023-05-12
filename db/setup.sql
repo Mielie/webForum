@@ -1,0 +1,5 @@
+DROP DATABASE IF EXISTS webforum_test;
+DROP DATABASE IF EXISTS webforum;
+
+CREATE DATABASE webforum_test;
+CREATE DATABASE webforum;
