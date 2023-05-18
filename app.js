@@ -1,28 +1,39 @@
 const express = require("express");
 const passport = require("passport");
-
-require("./passport");
+const jwt = require("jsonwebtoken");
 
 const app = express();
 
 app.use(express.json());
 
+require("./passport");
+
 app.post("/api/auth", (req, res, next) => {
-  passport.authenticate("local", { session: false }, (err, user, info) => {
-    if (err || !user) {
-      return res.status(401).send({ msg: info.message });
-    }
-    req.login(user, { session: false }, (err) => {
-      if (err) {
-        res.send(err);
-      }
-      return res.status(200).send({ user });
-    });
-  })(req, res);
+	passport.authenticate("local", { session: false }, (err, user, info) => {
+		if (err || !user) {
+			return res.status(401).send({ msg: info.message });
+		}
+		req.login(user, { session: false }, (err) => {
+			if (err) {
+				res.send(err);
+			}
+
+			const token = jwt.sign({ user: user.username }, "your_jwt_secret", {
+				expiresIn: "7d",
+			});
+			return res
+				.status(200)
+				.send({ user: { username: user.username }, token });
+		});
+	})(req, res);
 });
 
-app.get("/api", (request, response) => {
-	response.status(200).send({ message: "all ok" });
-});
+app.get(
+	"/api/whoami",
+	passport.authenticate("jwt", { session: false }),
+	(request, response) => {
+		response.status(200).send({ user: request.user });
+	}
+);
 
 module.exports = app;
