@@ -6,6 +6,10 @@ const db = require("./db/connection");
 const ExtractJWT = passportJWT.ExtractJwt;
 const JWTStrategy = passportJWT.Strategy;
 
+if (!process.env.JWT_SECRET) {
+  throw new Error("JWT_SECRET not set");
+}
+
 passport.use(
   new LocalStrategy((username, password, done) => {
     return db
@@ -30,7 +34,7 @@ passport.use(
   new JWTStrategy(
     {
       jwtFromRequest: ExtractJWT.fromAuthHeaderAsBearerToken(),
-      secretOrKey: "your_jwt_secret",
+      secretOrKey: process.env.JWT_SECRET,
     },
     (jwtPayload, cb) => {
       return cb(null, jwtPayload);
@@ -47,3 +51,5 @@ const passwordHasher = (
     .toString("hex");
   return { salt, hashedPassword };
 };
+
+module.exports = { passwordHasher };

@@ -18,9 +18,13 @@ app.post("/api/auth", (req, res, next) => {
 				res.send(err);
 			}
 
-			const token = jwt.sign({ user: user.username }, "your_jwt_secret", {
-				expiresIn: "7d",
-			});
+			const token = jwt.sign(
+				{ username: user.username },
+				process.env.JWT_SECRET,
+				{
+					expiresIn: "7d",
+				}
+			);
 			return res
 				.status(200)
 				.send({ user: { username: user.username }, token });
