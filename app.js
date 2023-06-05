@@ -22,7 +22,7 @@ app.post("/api/auth", (req, res, next) => {
 				{ username: user.username },
 				process.env.JWT_SECRET,
 				{
-					expiresIn: "7d",
+					expiresIn: user.session_timeout_value,
 				}
 			);
 			return res

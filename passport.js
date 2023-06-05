@@ -3,6 +3,10 @@ const crypto = require("crypto");
 const LocalStrategy = require("passport-local").Strategy;
 const passportJWT = require("passport-jwt");
 const db = require("./db/connection");
+const {
+  updateIncorrectPasswordAttempts,
+  updateLastLoginAttempt,
+} = require("./models/userModels");
 const ExtractJWT = passportJWT.ExtractJwt;
 const JWTStrategy = passportJWT.Strategy;
 
@@ -13,18 +17,46 @@ if (!process.env.JWT_SECRET) {
 passport.use(
   new LocalStrategy((username, password, done) => {
     return db
-      .query(`SELECT * FROM users WHERE username = $1`, [
-        username.toLowerCase(),
-      ])
+      .query(
+        `SELECT * FROM users JOIN security_policies USING (policy_id) WHERE username = $1`,
+        [username.toLowerCase()]
+      )
       .then(({ rows, rowCount }) => {
         if (!rowCount) {
           done(null, false, { message: "Incorrect username or password" });
-        } else {
-          const user = rows[0];
-          const { hashedPassword } = passwordHasher(password, user.salt);
-          if (user.password === hashedPassword) {
+          return;
+        }
+        const user = rows[0];
+        updateLastLoginAttempt(username, new Date());
+        if (user.incorrect_logins >= user.max_login_attempts) {
+          const lastLoginAttempt = new Date(user.last_login_attempt);
+          lastLoginAttempt.setSeconds(
+            lastLoginAttempt.getSeconds() + user.login_timeout_value
+          );
+          if (new Date() < lastLoginAttempt) {
+            done(null, false, { message: "Too many incorrect passwords" });
+            return;
+          }
+        }
+
+        const { hashedPassword } = passwordHasher(password, user.salt);
+
+        if (user.password === hashedPassword) {
+          if (user.incorrect_logins > 0) {
+            updateIncorrectPasswordAttempts(username, 0).then(() => {
+              done(null, user, { message: "Login successful" });
+              return;
+            });
+          } else {
             done(null, user, { message: "Login successful" });
           }
+        } else {
+          const newIncorrectLogins = user.incorrect_logins + 1;
+          updateIncorrectPasswordAttempts(username, newIncorrectLogins).then(
+            () => {
+              done(null, false, { message: "Incorrect username or password" });
+            }
+          );
         }
       });
   })
