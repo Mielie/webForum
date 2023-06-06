@@ -22,7 +22,7 @@ describe("Local strategy password authentication", () => {
 				.then(({ body }) => {
 					const { user, token } = body;
 					expect(typeof token).toBe("string");
-					expect(user.username).toBe("testuser");
+					expect(user.username).toBe(credentials.username);
 				});
 		});
 		it("should return a 200 and user object if correct username/password is provided after password timeout has expired", () => {
@@ -37,7 +37,7 @@ describe("Local strategy password authentication", () => {
 				.then(({ body }) => {
 					const { user, token } = body;
 					expect(typeof token).toBe("string");
-					expect(user.username).toBe("testuser3");
+					expect(user.username).toBe(credentials.username);
 				});
 		});
 		it("should reset the incorrect logins parameter", () => {
@@ -128,6 +128,63 @@ describe("Local strategy password authentication", () => {
 					const { msg } = body;
 					expect(msg).toBe("Too many incorrect passwords");
 				});
+		});
+		it("should return a 401 if the password has expired", () => {
+			const credentials = {
+				username: "testuser4",
+				password: "password123",
+			};
+			return request(app)
+				.post("/api/auth")
+				.send(credentials)
+				.expect(401)
+				.then(({ body }) => {
+					const { msg } = body;
+					expect(msg).toBe("Password has expired");
+				});
+		});
+	});
+});
+
+describe("JSON web token authentication strategy", () => {
+	describe("GET: 200", () => {
+		it("should return a 200 when passed a valid token", () => {
+			const credentials = {
+				username: "testuser",
+				password: "password123",
+			};
+
+			return request(app)
+				.post("/api/auth")
+				.send(credentials)
+				.expect(200)
+				.then(({ body: { token } }) =>
+					request(app)
+						.get("/api/whoami")
+						.set("Authorization", "Bearer " + token)
+						.expect(200)
+						.then(
+							({
+								body: {
+									user: { username },
+								},
+							}) => {
+								expect(username).toBe(credentials.username);
+							}
+						)
+				);
+		});
+	});
+	describe("GET: 401", () => {
+		it("should return a 401 when not passed a token", () => {
+			return request(app).get("/api/whoami").expect(401);
+		});
+
+		it("should return a 401 when passed an invalid token", () => {
+			return request(app)
+				.get("/api/whoami")
+				.set("Authorization", "Bearer " + "invalid token")
+				.expect(401);
 		});
 	});
 });

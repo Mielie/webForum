@@ -18,11 +18,25 @@ app.post("/api/auth", (req, res, next) => {
 				res.send(err);
 			}
 
+			let tokenExpiry = user.session_timeout_value;
+
+			if (user.password_timeout_value) {
+				const lastPasswordSet = new Date(user.last_password_set);
+				const secondsSinceSet = (new Date() - lastPasswordSet) / 1000;
+				const remainingSeconds = Math.floor(
+					user.password_timeout_value - secondsSinceSet
+				);
+				tokenExpiry =
+					tokenExpiry > remainingSeconds
+						? remainingSeconds
+						: tokenExpiry;
+			}
+
 			const token = jwt.sign(
 				{ username: user.username },
 				process.env.JWT_SECRET,
 				{
-					expiresIn: user.session_timeout_value,
+					expiresIn: tokenExpiry,
 				}
 			);
 			return res

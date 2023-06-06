@@ -42,14 +42,20 @@ passport.use(
         const { hashedPassword } = passwordHasher(password, user.salt);
 
         if (user.password === hashedPassword) {
-          if (user.incorrect_logins > 0) {
-            updateIncorrectPasswordAttempts(username, 0).then(() => {
-              done(null, user, { message: "Login successful" });
-              return;
-            });
-          } else {
+          updateIncorrectPasswordAttempts(username, 0).then(() => {
+            if (user.password_timeout_value) {
+              const passwordExpiryDate =
+                +new Date(user.last_password_set) +
+                (user.password_timeout_value ?? 0);
+              if (new Date() > passwordExpiryDate) {
+                done(null, false, { message: "Password has expired" });
+                return;
+              }
+            }
+
             done(null, user, { message: "Login successful" });
-          }
+            return;
+          });
         } else {
           const newIncorrectLogins = user.incorrect_logins + 1;
           updateIncorrectPasswordAttempts(username, newIncorrectLogins).then(
@@ -69,6 +75,9 @@ passport.use(
       secretOrKey: process.env.JWT_SECRET,
     },
     (jwtPayload, cb) => {
+      if (!jwtPayload) {
+        return done("Authentication failed: No bearer token provided", false);
+      }
       return cb(null, jwtPayload);
     }
   )

@@ -15,7 +15,7 @@ const seed = ({ userData, securityPolicyData }) => {
           login_timeout_value INT DEFAULT 60 NOT NULL,
           session_timeout_value INT DEFAULT 604800 NOT NULL,
           password_criteria VARCHAR,
-          password_timeout_value INT DEFAULT 0 NOT NULL
+          password_timeout_value INT
         );`);
     })
     .then(() => {
@@ -26,6 +26,7 @@ const seed = ({ userData, securityPolicyData }) => {
           account_locked BOOLEAN DEFAULT false NOT NULL,
           incorrect_logins INT DEFAULT 0 NOT NULL,
           last_login_attempt TIMESTAMPTZ DEFAULT NOW(),
+          last_password_set TIMESTAMPTZ DEFAULT NOW() NOT NULL,
           salt VARCHAR,
           policy_id INT NOT NULL REFERENCES security_policies(policy_id)
         );`);
@@ -57,7 +58,7 @@ const seed = ({ userData, securityPolicyData }) => {
     .then(() => {
       return db.query(
         format(
-          "INSERT INTO users (username, password, salt, incorrect_logins, last_login_attempt, policy_id) VALUES %L;",
+          "INSERT INTO users (username, password, salt, incorrect_logins, last_login_attempt, last_password_set, policy_id) VALUES %L;",
           userData.map(
             ({
               username,
@@ -65,6 +66,7 @@ const seed = ({ userData, securityPolicyData }) => {
               salt,
               incorrectLogins,
               lastLoginAttempt,
+              lastPasswordSet,
               policyId,
             }) => [
               username,
@@ -72,6 +74,7 @@ const seed = ({ userData, securityPolicyData }) => {
               salt,
               incorrectLogins,
               lastLoginAttempt,
+              lastPasswordSet,
               policyId,
             ]
           )

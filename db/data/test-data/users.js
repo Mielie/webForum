@@ -11,6 +11,7 @@ module.exports = [
 		salt: "ef74a08271890ff84cad62823eb93890",
 		incorrectLogins: 0,
 		lastLoginAttempt: dateOffset(),
+		lastPasswordSet: dateOffset(),
 		policyId: 1,
 	},
 	{
@@ -20,6 +21,7 @@ module.exports = [
 		salt: "ef74a08271890ff84cad62823eb93890",
 		incorrectLogins: 2,
 		lastLoginAttempt: dateOffset(),
+		lastPasswordSet: dateOffset(),
 		policyId: 1,
 	},
 	{
@@ -29,6 +31,17 @@ module.exports = [
 		salt: "ef74a08271890ff84cad62823eb93890",
 		incorrectLogins: 3,
 		lastLoginAttempt: dateOffset(-70),
+		lastPasswordSet: dateOffset(-70),
+		policyId: 1,
+	},
+	{
+		username: "testuser4",
+		password:
+			"cf7c41b992f148cc96d1ff8910105387ce944eed431bf856f8ff1f28d76cadd1", //password123
+		salt: "ef74a08271890ff84cad62823eb93890",
+		incorrectLogins: 0,
+		lastLoginAttempt: dateOffset(-70),
+		lastPasswordSet: dateOffset(-604801),
 		policyId: 1,
 	},
 ];
