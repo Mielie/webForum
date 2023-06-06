@@ -27,6 +27,12 @@ passport.use(
           return;
         }
         const user = rows[0];
+
+        if (user.account_locked) {
+          done(null, false, { message: "Account locked" });
+          return;
+        }
+
         updateLastLoginAttempt(username, new Date());
         if (user.incorrect_logins >= user.max_login_attempts) {
           const lastLoginAttempt = new Date(user.last_login_attempt);
@@ -75,10 +81,21 @@ passport.use(
       secretOrKey: process.env.JWT_SECRET,
     },
     (jwtPayload, cb) => {
-      if (!jwtPayload) {
-        return done("Authentication failed: No bearer token provided", false);
-      }
-      return cb(null, jwtPayload);
+      return db
+        .query(`SELECT account_locked FROM users WHERE username=$1;`, [
+          jwtPayload.username,
+        ])
+        .then(({ rows, rowCount }) => {
+          if (!rowCount) {
+            return cb(null, false, { message: "Account no longer exists" });
+          }
+          const user = rows[0];
+
+          if (user.account_locked) {
+            return cb(null, false, { message: "Account locked" });
+          }
+          return cb(null, jwtPayload);
+        });
     }
   )
 );

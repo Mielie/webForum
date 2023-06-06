@@ -143,6 +143,20 @@ describe("Local strategy password authentication", () => {
 					expect(msg).toBe("Password has expired");
 				});
 		});
+		it("should return a 401 if the users account is locked", () => {
+			const credentials = {
+				username: "testuser5",
+				password: "password123",
+			};
+			return request(app)
+				.post("/api/auth")
+				.send(credentials)
+				.expect(401)
+				.then(({ body }) => {
+					const { msg } = body;
+					expect(msg).toBe("Account locked");
+				});
+		});
 	});
 });
 
@@ -185,6 +199,31 @@ describe("JSON web token authentication strategy", () => {
 				.get("/api/whoami")
 				.set("Authorization", "Bearer " + "invalid token")
 				.expect(401);
+		});
+
+		it("should return a 401 when user account is locked", () => {
+			const credentials = {
+				username: "testuser6",
+				password: "password123",
+			};
+
+			return request(app)
+				.post("/api/auth")
+				.send(credentials)
+				.expect(200)
+				.then(({ body: { token } }) =>
+					db
+						.query(
+							`UPDATE users SET account_locked=true WHERE username=$1`,
+							[credentials.username]
+						)
+						.then(() =>
+							request(app)
+								.get("/api/whoami")
+								.set("Authorization", "Bearer " + token)
+								.expect(401)
+						)
+				);
 		});
 	});
 });

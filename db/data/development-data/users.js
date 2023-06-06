@@ -6,6 +6,7 @@ module.exports = [
 		salt: "ef74a08271890ff84cad62823eb93890",
 		incorrectLogins: 0,
 		lastPasswordSet: new Date(),
+		accountLocked: false,
 		policyId: 1,
 	},
 	{
@@ -15,6 +16,7 @@ module.exports = [
 		salt: "ef74a08271890ff84cad62823eb93890",
 		incorrectLogins: 0,
 		lastPasswordSet: new Date(),
+		accountLocked: false,
 		policyId: 1,
 	},
 ];

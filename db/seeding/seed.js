@@ -58,7 +58,7 @@ const seed = ({ userData, securityPolicyData }) => {
     .then(() => {
       return db.query(
         format(
-          "INSERT INTO users (username, password, salt, incorrect_logins, last_login_attempt, last_password_set, policy_id) VALUES %L;",
+          "INSERT INTO users (username, password, salt, incorrect_logins, last_login_attempt, last_password_set, account_locked, policy_id) VALUES %L;",
           userData.map(
             ({
               username,
@@ -67,6 +67,7 @@ const seed = ({ userData, securityPolicyData }) => {
               incorrectLogins,
               lastLoginAttempt,
               lastPasswordSet,
+              accountLocked,
               policyId,
             }) => [
               username,
@@ -75,6 +76,7 @@ const seed = ({ userData, securityPolicyData }) => {
               incorrectLogins,
               lastLoginAttempt,
               lastPasswordSet,
+              accountLocked,
               policyId,
             ]
           )
