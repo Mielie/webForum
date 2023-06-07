@@ -1,9 +1,15 @@
 const db = require("../connection");
 const format = require("pg-format");
 
-const seed = ({ userData, securityPolicyData }) => {
+const seed = ({ userData, securityPolicyData, groupData, userGroupsData }) => {
   return db
-    .query("DROP TABLE IF EXISTS users;")
+    .query("DROP TABLE IF EXISTS user_groups;")
+    .then(() => {
+      return db.query("DROP TABLE IF EXISTS groups;");
+    })
+    .then(() => {
+      return db.query("DROP TABLE IF EXISTS users;");
+    })
     .then(() => {
       return db.query("DROP TABLE IF EXISTS security_policies;");
     })
@@ -20,6 +26,13 @@ const seed = ({ userData, securityPolicyData }) => {
     })
     .then(() => {
       return db.query(`
+        CREATE TABLE groups (
+          group_id VARCHAR PRIMARY KEY,
+          description VARCHAR
+        );`);
+    })
+    .then(() => {
+      return db.query(`
         CREATE TABLE users (
           username VARCHAR PRIMARY KEY,
           password VARCHAR,
@@ -29,6 +42,13 @@ const seed = ({ userData, securityPolicyData }) => {
           last_password_set TIMESTAMPTZ DEFAULT NOW() NOT NULL,
           salt VARCHAR,
           policy_id INT NOT NULL REFERENCES security_policies(policy_id)
+        );`);
+    })
+    .then(() => {
+      return db.query(`
+        CREATE TABLE user_groups (
+          user_id VARCHAR NOT NULL REFERENCES users(username) ON DELETE CASCADE,
+          group_id VARCHAR NOT NULL REFERENCES groups(group_id) ON DELETE CASCADE
         );`);
     })
     .then(() => {
@@ -80,6 +100,22 @@ const seed = ({ userData, securityPolicyData }) => {
               policyId,
             ]
           )
+        )
+      );
+    })
+    .then(() => {
+      return db.query(
+        format(
+          "INSERT INTO groups (group_id, description) VALUES %L;",
+          groupData.map(({ group, description }) => [group, description])
+        )
+      );
+    })
+    .then(() => {
+      return db.query(
+        format(
+          "INSERT INTO user_groups (user_id, group_id) VALUES %L;",
+          userGroupsData.map(({ username, group }) => [username, group])
         )
       );
     });

@@ -8,7 +8,7 @@ beforeAll(() => seed(testData));
 
 afterAll(() => db.end());
 
-describe("Local strategy password authentication", () => {
+describe("Local password authentication strategy", () => {
 	describe("POST: 200", () => {
 		it("should return a 200 and user object if correct username and password is provided", () => {
 			const credentials = {
@@ -224,6 +224,288 @@ describe("JSON web token authentication strategy", () => {
 								.expect(401)
 						)
 				);
+		});
+	});
+});
+
+describe("/api/user", () => {
+	describe("GET: 200", () => {
+		it("should return 200 and a user object when correctly authenticated", () => {
+			const credentials = {
+				username: "testuser",
+				password: "password123",
+			};
+			return request(app)
+				.post("/api/auth")
+				.send(credentials)
+				.expect(200)
+				.then(({ body: { token } }) => {
+					return request(app)
+						.get("/api/user")
+						.set("Authorization", "Bearer " + token)
+						.expect(200)
+						.then(({ body: { user } }) => {
+							expect(user).toHaveProperty(
+								"username",
+								credentials.username
+							);
+							expect(user).toHaveProperty(
+								"account_locked",
+								expect.any(Boolean)
+							);
+							expect(user).toHaveProperty(
+								"incorrect_logins",
+								expect.any(Number)
+							);
+							expect(user).toHaveProperty(
+								"last_login_attempt",
+								expect.any(String)
+							);
+							expect(user).toHaveProperty(
+								"last_password_set",
+								expect.any(String)
+							);
+							expect(user).toHaveProperty(
+								"policy_id",
+								expect.any(Number)
+							);
+							expect(user).not.toHaveProperty("password");
+							expect(user).not.toHaveProperty("salt");
+						});
+				});
+		});
+	});
+	describe("GET: 401", () => {
+		it("should return 401 if no token is provided", () => {
+			return request(app).get("/api/user").expect(401);
+		});
+	});
+});
+
+describe("/api/users", () => {
+	describe("GET: 200", () => {
+		it("should return a list of users when requested by an administrator", () => {
+			const credentials = {
+				username: "testuser",
+				password: "password123",
+			};
+			return request(app)
+				.post("/api/auth")
+				.send(credentials)
+				.expect(200)
+				.then(({ body: { token } }) => {
+					return request(app)
+						.get("/api/users")
+						.set("Authorization", "Bearer " + token)
+						.expect(200)
+						.then(({ body: { users } }) => {
+							expect(Array.isArray(users)).toBe(true);
+						});
+				});
+		});
+	});
+
+	describe("GET: 401", () => {
+		it("should return 401 is a user who is not in the administrator group tries to access endpoint", () => {
+			const credentials = {
+				username: "testuser3",
+				password: "password123",
+			};
+			return request(app)
+				.post("/api/auth")
+				.send(credentials)
+				.expect(200)
+				.then(({ body: { token } }) => {
+					return request(app)
+						.get("/api/users")
+						.set("Authorization", "Bearer " + token)
+						.expect(401)
+						.then(({ body: { msg } }) => {
+							expect(msg).toBe(
+								"User is not in Administrator group"
+							);
+						});
+				});
+		});
+	});
+});
+
+describe("/api/users/:username", () => {
+	describe("GET: 200", () => {
+		it("should return 200 and the user details when requested by an administrator", () => {
+			const credentials = {
+				username: "testuser",
+				password: "password123",
+			};
+			return request(app)
+				.post("/api/auth")
+				.send(credentials)
+				.expect(200)
+				.then(({ body: { token } }) => {
+					return request(app)
+						.get("/api/users/testuser2")
+						.set("Authorization", "Bearer " + token)
+						.expect(200)
+						.then(({ body: { user } }) => {
+							expect(user.username).toBe("testuser2");
+							expect(user).not.toHaveProperty("salt");
+							expect(user).not.toHaveProperty("password");
+						});
+				});
+		});
+	});
+
+	describe("GET: 401", () => {
+		it("should return 401 when requested by non-administrator", () => {
+			const credentials = {
+				username: "testuser3",
+				password: "password123",
+			};
+			return request(app)
+				.post("/api/auth")
+				.send(credentials)
+				.expect(200)
+				.then(({ body: { token } }) => {
+					return request(app)
+						.get("/api/users/testuser2")
+						.set("Authorization", "Bearer " + token)
+						.expect(401)
+						.then(({ body: { msg } }) => {
+							expect(msg).toBe(
+								"User is not in Administrator group"
+							);
+						});
+				});
+		});
+	});
+
+	describe("GET: 404", () => {
+		it("should return 404 if user does not exist", () => {
+			const credentials = {
+				username: "testuser",
+				password: "password123",
+			};
+			return request(app)
+				.post("/api/auth")
+				.send(credentials)
+				.expect(200)
+				.then(({ body: { token } }) => {
+					return request(app)
+						.get("/api/users/notavaliduser")
+						.set("Authorization", "Bearer " + token)
+						.expect(404)
+						.then(({ body: { msg } }) => {
+							expect(msg).toBe("No user found");
+						});
+				});
+		});
+	});
+});
+
+describe("/api/users/:username/groups", () => {
+	describe("GET: 200", () => {
+		it("should return 200 and the groups a user is a member of if the requester is an Administrator", () => {
+			const credentials = {
+				username: "testuser",
+				password: "password123",
+			};
+			return request(app)
+				.post("/api/auth")
+				.send(credentials)
+				.expect(200)
+				.then(({ body: { token } }) => {
+					return request(app)
+						.get("/api/users/testuser2/groups")
+						.set("Authorization", "Bearer " + token)
+						.expect(200)
+						.then(({ body: { groups } }) => {
+							expect(groups).toEqual([
+								{
+									group_id: "User",
+									description: "Base user group",
+								},
+							]);
+						});
+				});
+		});
+	});
+
+	describe("GET: 401", () => {
+		it("should return 401 if requestor is not an administrator", () => {
+			const credentials = {
+				username: "testuser3",
+				password: "password123",
+			};
+			return request(app)
+				.post("/api/auth")
+				.send(credentials)
+				.expect(200)
+				.then(({ body: { token } }) => {
+					return request(app)
+						.get("/api/users/testuser2/groups")
+						.set("Authorization", "Bearer " + token)
+						.expect(401)
+						.then(({ body: { msg } }) => {
+							expect(msg).toBe(
+								"User is not in Administrator group"
+							);
+						});
+				});
+		});
+	});
+
+	describe("GET: 404", () => {
+		it("should return 404 if the user is not a valid user", () => {
+			const credentials = {
+				username: "testuser",
+				password: "password123",
+			};
+			return request(app)
+				.post("/api/auth")
+				.send(credentials)
+				.expect(200)
+				.then(({ body: { token } }) => {
+					return request(app)
+						.get("/api/users/notavaliduser/groups")
+						.set("Authorization", "Bearer " + token)
+						.expect(404)
+						.then(({ body: { msg } }) => {
+							expect(msg).toBe("No user found");
+						});
+				});
+		});
+	});
+});
+
+describe("/api/user/groups", () => {
+	describe("GET: 200", () => {
+		it("should return 200 and a list of all the groups the user is a member of", () => {
+			const credentials = {
+				username: "testuser",
+				password: "password123",
+			};
+			return request(app)
+				.post("/api/auth")
+				.send(credentials)
+				.expect(200)
+				.then(({ body: { token } }) => {
+					return request(app)
+						.get("/api/user/groups")
+						.set("Authorization", "Bearer " + token)
+						.expect(200)
+						.then(({ body: { groups } }) => {
+							expect(groups).toEqual([
+								{
+									group_id: "Administrator",
+									description: "Default superuser group",
+								},
+								{
+									group_id: "User",
+									description: "Base user group",
+								},
+							]);
+						});
+				});
 		});
 	});
 });

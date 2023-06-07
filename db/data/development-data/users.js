@@ -1,6 +1,6 @@
 module.exports = [
 	{
-		username: "testuser",
+		username: "admin",
 		password:
 			"cf7c41b992f148cc96d1ff8910105387ce944eed431bf856f8ff1f28d76cadd1",
 		salt: "ef74a08271890ff84cad62823eb93890",
@@ -10,7 +10,7 @@ module.exports = [
 		policyId: 1,
 	},
 	{
-		username: "testuser2",
+		username: "user",
 		password:
 			"cf7c41b992f148cc96d1ff8910105387ce944eed431bf856f8ff1f28d76cadd1",
 		salt: "ef74a08271890ff84cad62823eb93890",
