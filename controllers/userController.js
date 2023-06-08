@@ -1,9 +1,13 @@
 const {
 	getUserByUsername,
+	getUserAndPolicyByUsername,
 	getUserGroups,
 	getAllUserDetails,
 	checkUserGroupMembership,
+	updateUserPassword,
 } = require("../models/userModels");
+
+const { passwordHasher } = require("../passport");
 
 exports.fetchUserDetails = (request, response, next) => {
 	return getUserByUsername(request.user.username)
@@ -59,6 +63,39 @@ exports.fetchUserGroupsByUsername = (request, response, next) => {
 	return Promise.all([groups, user, admin])
 		.then(([groups]) => {
 			response.status(200).send({ groups });
+		})
+		.catch(next);
+};
+
+exports.setUserPassword = (request, response, next) => {
+	const { username, oldPassword, newPassword } = request.body;
+	return getUserAndPolicyByUsername(username)
+		.then((user) => {
+			const { hashedPassword } = passwordHasher(oldPassword, user.salt);
+			if (hashedPassword === user.password) {
+				const passwordTest = new RegExp(user.password_criteria);
+				if (!passwordTest.test(newPassword)) {
+					response.status(400).send({
+						msg: "New password does not meet complexity requirements",
+					});
+				} else {
+					const { newSalt, newPasswordHashed } =
+						passwordHasher(newPassword);
+					return updateUserPassword(
+						username,
+						String(newSalt),
+						newPasswordHashed
+					).then(() =>
+						response
+							.status(200)
+							.send({ msg: "Password successfully changed" })
+					);
+				}
+			} else {
+				return response
+					.status(401)
+					.send({ msg: "Incorrect username or password" });
+			}
 		})
 		.catch(next);
 };

@@ -8,6 +8,7 @@ const {
 	fetchAllUserDetails,
 	fetchUserDetailsByUsername,
 	fetchUserGroupsByUsername,
+	setUserPassword,
 } = require("./controllers/userController");
 const { customErrorHandler } = require("./controllers/errorController");
 
@@ -54,6 +55,8 @@ app.post("/api/auth", (req, res, next) => {
 		});
 	})(req, res);
 });
+
+app.post("/api/setpassword", setUserPassword);
 
 app.get(
 	"/api/users",

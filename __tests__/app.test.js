@@ -509,3 +509,56 @@ describe("/api/user/groups", () => {
 		});
 	});
 });
+
+describe("/api/setpassword", () => {
+	describe("POST: 200", () => {
+		it("should update the user password when given valid user credentials and a valid password", () => {
+			const credentials = {
+				username: "testuser",
+				oldPassword: "password123",
+				newPassword: "Blinded=ab1",
+			};
+			return request(app)
+				.post("/api/setpassword")
+				.send(credentials)
+				.expect(200)
+				.then(({ body: { msg } }) => {
+					expect(msg).toBe("Password successfully changed");
+				});
+		});
+	});
+	describe("POST: 400", () => {
+		it("should return a 400 if the password does not meet complexity requirements", () => {
+			const credentials = {
+				username: "testuser2",
+				oldPassword: "password123",
+				newPassword: "Blindedab1",
+			};
+			return request(app)
+				.post("/api/setpassword")
+				.send(credentials)
+				.expect(400)
+				.then(({ body: { msg } }) => {
+					expect(msg).toBe(
+						"New password does not meet complexity requirements"
+					);
+				});
+		});
+	});
+	describe("POST: 401", () => {
+		it("should return a 401 if the old password is incorrect", () => {
+			const credentials = {
+				username: "testuser",
+				oldPassword: "password123",
+				newPassword: "Blinded=ab1",
+			};
+			return request(app)
+				.post("/api/setpassword")
+				.send(credentials)
+				.expect(401)
+				.then(({ body: { msg } }) => {
+					expect(msg).toBe("Incorrect username or password");
+				});
+		});
+	});
+});

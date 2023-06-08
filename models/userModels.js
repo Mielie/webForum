@@ -34,12 +34,26 @@ exports.getUserByUsername = (username) => {
 		.query(
 			`SELECT * FROM users
 			WHERE username = $1;`,
-			[username]
+			[username.toLowerCase()]
 		)
 		.then(({ rows, rowCount }) => {
 			if (rowCount) {
 				delete rows[0].salt;
 				delete rows[0].password;
+				return rows[0];
+			}
+			return Promise.reject({ status: 404, msg: "No user found" });
+		});
+};
+
+exports.getUserAndPolicyByUsername = (username) => {
+	return db
+		.query(
+			`SELECT * FROM users JOIN security_policies USING (policy_id) WHERE username = $1`,
+			[username.toLowerCase()]
+		)
+		.then(({ rows, rowCount }) => {
+			if (rowCount) {
 				return rows[0];
 			}
 			return Promise.reject({ status: 404, msg: "No user found" });
@@ -82,4 +96,11 @@ exports.checkUserGroupMembership = (username, group) => {
 				msg: `User is not in ${group} group`,
 			});
 		});
+};
+
+exports.updateUserPassword = (username, salt, password) => {
+	return db.query(
+		`UPDATE users SET salt=$1,password=$2,last_password_set=$3 WHERE username=$4;`,
+		[salt, password, new Date(), username]
+	);
 };
