@@ -9,6 +9,7 @@ const {
 	fetchUserDetailsByUsername,
 	fetchUserGroupsByUsername,
 	setUserPassword,
+	setUserPasswordByUsername,
 } = require("./controllers/userController");
 const { customErrorHandler } = require("./controllers/errorController");
 
@@ -57,6 +58,12 @@ app.post("/api/auth", (req, res, next) => {
 });
 
 app.post("/api/setpassword", setUserPassword);
+
+app.post(
+	"/api/users/:username/setpassword",
+	passport.authenticate("jwt", { session: false }),
+	setUserPasswordByUsername
+);
 
 app.get(
 	"/api/users",

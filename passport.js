@@ -23,53 +23,54 @@ passport.use(
       )
       .then(({ rows, rowCount }) => {
         if (!rowCount) {
-          done(null, false, { message: "Incorrect username or password" });
-          return;
+          return done(null, false, {
+            message: "Incorrect username or password",
+          });
         }
         const user = rows[0];
 
         if (user.account_locked) {
-          done(null, false, { message: "Account locked" });
-          return;
+          return done(null, false, { message: "Account locked" });
         }
 
-        updateLastLoginAttempt(username, new Date());
-        if (user.incorrect_logins >= user.max_login_attempts) {
-          const lastLoginAttempt = new Date(user.last_login_attempt);
-          lastLoginAttempt.setSeconds(
-            lastLoginAttempt.getSeconds() + user.login_timeout_value
-          );
-          if (new Date() < lastLoginAttempt) {
-            done(null, false, { message: "Too many incorrect passwords" });
-            return;
+        return updateLastLoginAttempt(username, new Date()).then(() => {
+          if (user.incorrect_logins >= user.max_login_attempts) {
+            const lastLoginAttempt = new Date(user.last_login_attempt);
+            lastLoginAttempt.setSeconds(
+              lastLoginAttempt.getSeconds() + user.login_timeout_value
+            );
+            if (new Date() < lastLoginAttempt) {
+              return done(null, false, {
+                message: "Too many incorrect passwords",
+              });
+            }
           }
-        }
 
-        const { hashedPassword } = passwordHasher(password, user.salt);
+          const { hashedPassword } = passwordHasher(password, user.salt);
 
-        if (user.password === hashedPassword) {
-          updateIncorrectPasswordAttempts(username, 0).then(() => {
-            if (user.password_timeout_value) {
-              const passwordExpiryDate =
-                +new Date(user.last_password_set) +
-                (user.password_timeout_value ?? 0);
-              if (new Date() > passwordExpiryDate) {
-                done(null, false, { message: "Password has expired" });
-                return;
+          if (user.password === hashedPassword) {
+            updateIncorrectPasswordAttempts(username, 0).then(() => {
+              if (user.password_timeout_value) {
+                const passwordExpiryDate =
+                  +new Date(user.last_password_set) +
+                  (user.password_timeout_value ?? 0);
+                if (new Date() > passwordExpiryDate) {
+                  return done(null, false, { message: "Password has expired" });
+                }
               }
-            }
 
-            done(null, user, { message: "Login successful" });
-            return;
-          });
-        } else {
-          const newIncorrectLogins = user.incorrect_logins + 1;
-          updateIncorrectPasswordAttempts(username, newIncorrectLogins).then(
-            () => {
-              done(null, false, { message: "Incorrect username or password" });
-            }
-          );
-        }
+              return done(null, user, { message: "Login successful" });
+            });
+          } else {
+            const newIncorrectLogins = user.incorrect_logins + 1;
+            updateIncorrectPasswordAttempts(username, newIncorrectLogins).then(
+              () =>
+                done(null, false, {
+                  message: "Incorrect username or password",
+                })
+            );
+          }
+        });
       });
   })
 );

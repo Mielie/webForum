@@ -562,3 +562,92 @@ describe("/api/setpassword", () => {
 		});
 	});
 });
+
+describe("/api/users/:user/setpassword", () => {
+	describe("POST: 200", () => {
+		it("should return 200 and set the users password when called by an administrator", () => {
+			const credentials = {
+				username: "testuser",
+				password: "Blinded=ab1",
+			};
+			const newPassword = {
+				password: "abc123",
+			};
+			return request(app)
+				.post("/api/auth")
+				.send(credentials)
+				.expect(200)
+				.then(({ body: { token } }) => {
+					return request(app)
+						.post("/api/users/testuser3/setpassword")
+						.set("Authorization", "Bearer " + token)
+						.send(newPassword)
+						.expect(200)
+						.then(({ body: { msg } }) => {
+							expect(msg).toBe("Password successfully changed");
+							return request(app)
+								.post("/api/auth")
+								.send({
+									username: "testuser3",
+									password: "abc123",
+								})
+								.expect(200);
+						});
+				});
+		});
+	});
+
+	describe("POST: 401", () => {
+		it("should return 401 if user is not an administrator", () => {
+			const credentials = {
+				username: "testuser3",
+				password: "abc123",
+			};
+			const newPassword = {
+				password: "abc123",
+			};
+			return request(app)
+				.post("/api/auth")
+				.send(credentials)
+				.expect(200)
+				.then(({ body: { token } }) => {
+					return request(app)
+						.post("/api/users/testuser4/setpassword")
+						.set("Authorization", "Bearer " + token)
+						.send(newPassword)
+						.expect(401)
+						.then(({ body: { msg } }) => {
+							expect(msg).toBe(
+								"User is not in Administrator group"
+							);
+						});
+				});
+		});
+	});
+
+	describe("POST: 404", () => {
+		it("should return 404 if user does not exist", () => {
+			const credentials = {
+				username: "testuser",
+				password: "Blinded=ab1",
+			};
+			const newPassword = {
+				password: "abc123",
+			};
+			return request(app)
+				.post("/api/auth")
+				.send(credentials)
+				.expect(200)
+				.then(({ body: { token } }) => {
+					return request(app)
+						.post("/api/users/notavaliduser/setpassword")
+						.set("Authorization", "Bearer " + token)
+						.send(newPassword)
+						.expect(404)
+						.then(({ body: { msg } }) => {
+							expect(msg).toBe("No user found");
+						});
+				});
+		});
+	});
+});

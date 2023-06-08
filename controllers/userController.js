@@ -72,30 +72,39 @@ exports.setUserPassword = (request, response, next) => {
 	return getUserAndPolicyByUsername(username)
 		.then((user) => {
 			const { hashedPassword } = passwordHasher(oldPassword, user.salt);
-			if (hashedPassword === user.password) {
-				const passwordTest = new RegExp(user.password_criteria);
-				if (!passwordTest.test(newPassword)) {
-					response.status(400).send({
-						msg: "New password does not meet complexity requirements",
-					});
-				} else {
-					const { newSalt, newPasswordHashed } =
-						passwordHasher(newPassword);
-					return updateUserPassword(
-						username,
-						String(newSalt),
-						newPasswordHashed
-					).then(() =>
-						response
-							.status(200)
-							.send({ msg: "Password successfully changed" })
-					);
-				}
-			} else {
-				return response
-					.status(401)
-					.send({ msg: "Incorrect username or password" });
+			if (hashedPassword !== user.password) {
+				return Promise.reject({
+					status: 401,
+					msg: "Incorrect username or password",
+				});
 			}
+
+			const passwordTest = new RegExp(user.password_criteria);
+			if (!passwordTest.test(newPassword)) {
+				return Promise.reject({
+					status: 400,
+					msg: "New password does not meet complexity requirements",
+				});
+			}
+
+			const { salt, hashedPassword: newPasswordHashed } =
+				passwordHasher(newPassword);
+			return updateUserPassword(username, salt, newPasswordHashed);
 		})
+		.then(() =>
+			response.status(200).send({ msg: "Password successfully changed" })
+		)
+		.catch(next);
+};
+
+exports.setUserPasswordByUsername = (request, response, next) => {
+	const { password } = request.body;
+	const { username } = request.params;
+	const { salt, hashedPassword } = passwordHasher(password);
+	return checkUserGroupMembership(request.user.username, "Administrator")
+		.then(() => updateUserPassword(username, salt, hashedPassword))
+		.then(() =>
+			response.status(200).send({ msg: "Password successfully changed" })
+		)
 		.catch(next);
 };

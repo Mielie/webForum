@@ -99,8 +99,16 @@ exports.checkUserGroupMembership = (username, group) => {
 };
 
 exports.updateUserPassword = (username, salt, password) => {
-	return db.query(
-		`UPDATE users SET salt=$1,password=$2,last_password_set=$3 WHERE username=$4;`,
-		[salt, password, new Date(), username]
-	);
+	return db
+		.query(
+			`UPDATE users SET salt=$1,password=$2,last_password_set=$3 WHERE username=$4;`,
+			[salt, password, new Date(), username]
+		)
+		.then(({ rowCount }) => {
+			if (rowCount) {
+				return true;
+			} else {
+				return Promise.reject({ status: 404, msg: "No user found" });
+			}
+		});
 };
